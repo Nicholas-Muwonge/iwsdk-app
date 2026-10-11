@@ -1,6 +1,6 @@
 <!--
-  Mid plane - code / diff content.
-  Primary focus surface.
+  Productivity area: REVIEW
+  Mid plane - scannable diff for the active file.
 -->
 <style>
   .mid-root {
@@ -13,6 +13,12 @@
     background-color: rgba(12, 12, 16, 0.94);
     border-radius: 10px;
     gap: 6px;
+  }
+
+  .zone-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #60a5fa;
   }
 
   .file-header {
@@ -37,6 +43,7 @@
   .diff-summary {
     font-size: 11px;
     color: #a1a1aa;
+    margin-bottom: 2px;
   }
 
   .diff-body {
@@ -80,49 +87,48 @@
   .hunk-header {
     font-size: 11px;
     color: #60a5fa;
-    margin-top: 6px;
+    margin-top: 4px;
     margin-bottom: 2px;
     font-weight: 600;
   }
 </style>
 
 <Panel class="mid-root">
+  <div class="zone-label" id="zone-review">REVIEW</div>
   <div class="file-header">
     <div class="file-name" id="current-file">src/auth/session.ts</div>
     <div class="hunk-count" id="hunk-info">Hunk 1 of 2</div>
   </div>
-  <div class="diff-summary" id="diff-summary">
-    jwt.decode to jwt.verify + expiry check
-  </div>
+  <div class="diff-summary" id="diff-summary">jwt.decode to jwt.verify + expiry check</div>
   <div class="diff-body" id="diff-body">
-    <div class="hunk-header">@@ -42,7 +42,12 @@ export function validateSession</div>
-    <div class="line line-ctx">
-      <div class="line-num">42</div>
-      <div>  if (!token) return null;</div>
+    <div class="hunk-header" id="hunk-header">@@ -42,7 +42,12 @@ export function validateSession</div>
+    <div class="line line-ctx" id="line-0">
+      <div class="line-num" id="line-0-num">42</div>
+      <div id="line-0-text">  if (!token) return null;</div>
     </div>
-    <div class="line line-del">
-      <div class="line-num">43</div>
-      <div>-  const payload = jwt.decode(token);</div>
+    <div class="line line-del" id="line-1">
+      <div class="line-num" id="line-1-num">43</div>
+      <div id="line-1-text">-  const payload = jwt.decode(token);</div>
     </div>
-    <div class="line line-add">
-      <div class="line-num">43</div>
-      <div>+  const payload = await jwt.verify(token, secret);</div>
+    <div class="line line-add" id="line-2">
+      <div class="line-num" id="line-2-num">43</div>
+      <div id="line-2-text">+  const payload = await jwt.verify(token, secret);</div>
     </div>
-    <div class="line line-add">
-      <div class="line-num">44</div>
-      <div>+  if (!payload || payload.exp &lt; Date.now() / 1000) {</div>
+    <div class="line line-add" id="line-3">
+      <div class="line-num" id="line-3-num">44</div>
+      <div id="line-3-text">+  if (!payload || payload.exp &lt; Date.now() / 1000) {</div>
     </div>
-    <div class="line line-add">
-      <div class="line-num">45</div>
-      <div>+    return null;</div>
+    <div class="line line-add" id="line-4">
+      <div class="line-num" id="line-4-num">45</div>
+      <div id="line-4-text">+    return null;</div>
     </div>
-    <div class="line line-add">
-      <div class="line-num">46</div>
-      <div>+  }</div>
+    <div class="line line-add" id="line-5">
+      <div class="line-num" id="line-5-num">46</div>
+      <div id="line-5-text">+  }</div>
     </div>
-    <div class="line line-ctx">
-      <div class="line-num">47</div>
-      <div>  return payload as SessionPayload;</div>
+    <div class="line line-ctx" id="line-6">
+      <div class="line-num" id="line-6-num">47</div>
+      <div id="line-6-text">  return payload as SessionPayload;</div>
     </div>
   </div>
 </Panel>

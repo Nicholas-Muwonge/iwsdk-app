@@ -1,8 +1,14 @@
 <!--
   Near plane - status, actions, voice annotation.
-  Closest depth layer.
+  Closest depth layer. Productivity area: DECIDE
 -->
 <style>
+  .zone-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #34d399;
+  }
+
   .near-root {
     flex-direction: column;
     width: 420px;
@@ -142,6 +148,7 @@
 </style>
 
 <Panel class="near-root">
+  <div class="zone-label" id="zone-decide">DECIDE</div>
   <div class="title-row">
     <div class="pr-title" id="pr-title">PR #4920 · fix: merge conflict in auth</div>
   </div>
@@ -149,6 +156,7 @@
     <div class="chip chip-green">main ← feature/auth-fix</div>
     <div class="chip chip-blue">3 files</div>
     <div class="chip">+48 −12</div>
+    <div class="chip chip-blue" id="progress-chip">0/3 reviewed</div>
   </div>
   <div class="actions" id="actions-row">
     <Button id="approve-btn" class="action-btn">

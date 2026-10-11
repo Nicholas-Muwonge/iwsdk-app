@@ -1,6 +1,6 @@
 <!--
-  Far plane - file list / overview.
-  Furthest in the depth stack.
+  Productivity area: NAVIGATE
+  Far plane - changed files list.
 -->
 <style>
   .far-root {
@@ -13,6 +13,12 @@
     background-color: rgba(24, 24, 28, 0.75);
     border-radius: 10px;
     gap: 4px;
+  }
+
+  .zone-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #a78bfa;
   }
 
   .section-title {
@@ -58,20 +64,21 @@
 </style>
 
 <Panel class="far-root">
+  <div class="zone-label" id="zone-navigate">NAVIGATE</div>
   <div class="section-title">Changed Files</div>
   <div class="file-item file-item-active" id="file-session">
     <div class="file-icon">TS</div>
-    <div>src/auth/session.ts</div>
+    <div id="file-session-label">src/auth/session.ts</div>
   </div>
   <div class="file-item" id="file-middleware">
     <div class="file-icon">TS</div>
-    <div>src/middleware/auth.ts</div>
+    <div id="file-middleware-label">src/middleware/auth.ts</div>
   </div>
   <div class="file-item" id="file-test">
     <div class="file-icon">TS</div>
-    <div>tests/auth.test.ts</div>
+    <div id="file-test-label">tests/auth.test.ts</div>
   </div>
   <div class="stats" id="overview-stats">
-    3 files · 2 hunks remaining
+    0/3 files reviewed
   </div>
 </Panel>
