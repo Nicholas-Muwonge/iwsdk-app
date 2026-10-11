@@ -36,15 +36,7 @@
       }
     },
     "features": { 
-      "locomotion": {
-        "useWorker": true,
-        "initialPlayerPosition": [
-          -4,
-          0,
-          -6
-        ],
-        "browserControls": true
-      },
+      "locomotion": false,
       "grabbing": true,
       "physics": false,
       "sceneUnderstanding": false,

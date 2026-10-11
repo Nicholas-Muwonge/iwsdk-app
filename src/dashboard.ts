@@ -19,6 +19,11 @@ import {
 } from '@iwsdk/core';
 
 import {AnnotationSystem} from './annotation.js';
+import {
+  loadPersistedSession,
+  savePersistedSession,
+  clearPersistedSession,
+} from './session-persist.js';
 
 /** Physical distances (meters) for the three depth planes */
 const DEPTH = {
@@ -46,27 +51,65 @@ const IDLE_TIMEOUT_MS = 2 * 60 * 1000;  // 2 min idle
 const WARN_BEFORE_MAX_MS = 30 * 1000;   // warn 30s before max
 const TIMEOUT_TICK_MS = 1000;
 
+interface DiffLine {
+  kind: 'ctx' | 'add' | 'del';
+  num: string;
+  text: string;
+}
+
 interface FileDiff {
   path: string;
   hunkLabel: string;
+  hunkHeader: string;
   summary: string;
+  lines: DiffLine[];
 }
 
 const FILE_DIFFS: Record<string, FileDiff> = {
   'src/auth/session.ts': {
     path: 'src/auth/session.ts',
     hunkLabel: 'Hunk 1 of 2',
-    summary: 'jwt.decode → jwt.verify + expiry check',
+    hunkHeader: '@@ -42,7 +42,12 @@ export function validateSession',
+    summary: 'jwt.decode -> jwt.verify + expiry check',
+    lines: [
+      { kind: 'ctx', num: '42', text: '  if (!token) return null;' },
+      { kind: 'del', num: '43', text: '-  const payload = jwt.decode(token);' },
+      { kind: 'add', num: '43', text: '+  const payload = await jwt.verify(token, secret);' },
+      { kind: 'add', num: '44', text: '+  if (!payload || payload.exp < Date.now() / 1000) {' },
+      { kind: 'add', num: '45', text: '+    return null;' },
+      { kind: 'add', num: '46', text: '+  }' },
+      { kind: 'ctx', num: '47', text: '  return payload as SessionPayload;' },
+    ],
   },
   'src/middleware/auth.ts': {
     path: 'src/middleware/auth.ts',
     hunkLabel: 'Hunk 1 of 1',
+    hunkHeader: '@@ -18,5 +18,8 @@ export async function requireAuth',
     summary: 'requireAuth now awaits validateSession',
+    lines: [
+      { kind: 'ctx', num: '18', text: '  const header = req.headers.authorization;' },
+      { kind: 'del', num: '19', text: '-  const session = validateSession(header);' },
+      { kind: 'add', num: '19', text: '+  const session = await validateSession(header);' },
+      { kind: 'ctx', num: '20', text: '  if (!session) {' },
+      { kind: 'ctx', num: '21', text: '    return res.status(401).end();' },
+      { kind: 'add', num: '22', text: '+  req.session = session;' },
+      { kind: 'ctx', num: '23', text: '  return next();' },
+    ],
   },
   'tests/auth.test.ts': {
     path: 'tests/auth.test.ts',
     hunkLabel: 'Hunk 1 of 1',
+    hunkHeader: '@@ -55,3 +55,14 @@ describe("validateSession"',
     summary: 'added expired-token + missing-secret cases',
+    lines: [
+      { kind: 'ctx', num: '55', text: '  it("rejects missing token", async () => {' },
+      { kind: 'ctx', num: '56', text: '    expect(await validateSession(null)).toBeNull();' },
+      { kind: 'ctx', num: '57', text: '  });' },
+      { kind: 'add', num: '58', text: '+  it("rejects expired token", async () => {' },
+      { kind: 'add', num: '59', text: '+    const t = sign({ exp: 1 });' },
+      { kind: 'add', num: '60', text: '+    expect(await validateSession(t)).toBeNull();' },
+      { kind: 'add', num: '61', text: '+  });' },
+    ],
   },
 };
 
@@ -103,7 +146,11 @@ export class DashboardSystem extends createSystem({}) {
   private pendingPR: PRPayload | null = null;
   private lastInteractionAt = 0;
   private timeoutTimer: ReturnType<typeof setInterval> | null = null;
+  private touchInteraction(): void {
+    this.lastInteractionAt = Date.now();
+  }
   private maxWarned = false;
+  private reviewedFiles = new Set<string>();
 
   private clearSessionTimers(): void {
     if (this.timeoutTimer) {
@@ -162,6 +209,7 @@ export class DashboardSystem extends createSystem({}) {
 
   init(): void {
     // XR active ≈ Visible / VisibleBlurred (no ImmersiveVR on VisibilityState)
+    console.log('[Dashboard] init() running');
     const isImmersive = (state: VisibilityState) =>
       state === VisibilityState.Visible ||
       state === VisibilityState.VisibleBlurred;
@@ -318,9 +366,19 @@ export class DashboardSystem extends createSystem({}) {
   public loadPR(payload: PRPayload): void {
     this.pendingPR = payload;
     this.decisionMade = false;
+    this.reviewedFiles.clear();
+    if (payload.files.length > 0) this.activeFile = payload.files[0];
+
+    savePersistedSession({
+      pr: payload,
+      activeFile: this.activeFile,
+      decisionMade: false,
+      decision: null,
+    });
 
     if (this.created && this.nearAsset) {
       this.applyPR(payload);
+      this.selectFile(this.activeFile);
     } else {
       console.log(
         `[Dashboard] PR #${payload.id} queued – will apply when cockpit opens`,
@@ -519,20 +577,55 @@ export class DashboardSystem extends createSystem({}) {
   }
 
   public selectFile(filePath: string): void {
+    this.touchInteraction();
     this.activeFile = filePath;
+    this.reviewedFiles.add(filePath);
+    savePersistedSession({ activeFile: filePath });
     const diff = FILE_DIFFS[filePath];
 
+    // --- REVIEW zone (mid) ---
     if (this.midAsset) {
       const fileNameEl = this.midAsset.getElementById('current-file');
       const hunkInfoEl = this.midAsset.getElementById('hunk-info');
+      const summaryEl = this.midAsset.getElementById('diff-summary');
+      const hunkHeaderEl = this.midAsset.getElementById('hunk-header');
       if (fileNameEl) fileNameEl.setProperties({ text: filePath });
       if (hunkInfoEl) {
         hunkInfoEl.setProperties({
           text: diff ? diff.hunkLabel : 'No hunks',
         });
       }
+      if (summaryEl) {
+        summaryEl.setProperties({
+          text: diff ? diff.summary : 'No diff loaded',
+        });
+      }
+      if (hunkHeaderEl && diff) {
+        hunkHeaderEl.setProperties({ text: diff.hunkHeader });
+      }
+      for (let i = 0; i < 7; i++) {
+        const row = this.midAsset.getElementById(`line-${i}`);
+        const num = this.midAsset.getElementById(`line-${i}-num`);
+        const text = this.midAsset.getElementById(`line-${i}-text`);
+        const line = diff?.lines[i];
+        if (!row) continue;
+        if (!line) {
+          row.setProperties({ display: 'none' });
+          continue;
+        }
+        const cls =
+          line.kind === 'add'
+            ? 'line line-add'
+            : line.kind === 'del'
+              ? 'line line-del'
+              : 'line line-ctx';
+        row.setProperties({ display: 'flex', class: cls });
+        if (num) num.setProperties({ text: line.num });
+        if (text) text.setProperties({ text: line.text });
+      }
     }
 
+    // --- NAVIGATE zone (far) ---
     if (this.farAsset) {
       for (const [id, path] of Object.entries(FILE_IDS)) {
         const el = this.farAsset.getElementById(id);
@@ -541,8 +634,38 @@ export class DashboardSystem extends createSystem({}) {
           class: path === filePath ? 'file-item file-item-active' : 'file-item',
         });
       }
-      // … stats update …
+      const statsEl = this.farAsset.getElementById('overview-stats');
+      if (statsEl) {
+        const total = Object.keys(FILE_IDS).length;
+        statsEl.setProperties({
+          text: `${this.reviewedFiles.size}/${total} files reviewed`,
+        });
+      }
     }
+
+    // --- DECIDE zone progress ---
+    if (this.nearAsset) {
+      const progress = this.nearAsset.getElementById('progress-chip');
+      if (progress) {
+        const total = Object.keys(FILE_IDS).length;
+        progress.setProperties({
+          text: `${this.reviewedFiles.size}/${total} reviewed`,
+        });
+      }
+    }
+
+    console.log(`[Dashboard] REVIEW focus -> ${filePath}`);
+  }
+
+  public ensureCockpit(reason = 'ensureCockpit'): void {
+    if (this.created) {
+      console.log('[Dashboard] ensureCockpit: already created');
+      return;
+    }
+    console.log(`[Dashboard] ensureCockpit (${reason})`);
+    this.createDashboard().catch((err) =>
+      console.error('[Dashboard] ensureCockpit failed', err),
+    );
   }
 
   

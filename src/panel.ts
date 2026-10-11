@@ -3,7 +3,8 @@
  *
  * - Enter Spatial Terminal → launchXR()
  * - Exit to Browser → exitXR()
- * - Load Demo PR #4920 → sets a simple flag + status (ready for deep-link later)
+ * - Load Demo PR #4920 → calls DashboardSystem.loadPR()
+ * - Deep link (?pr=…) is resolved in index.ts; we only reflect status here
  */
 
 import {
@@ -12,9 +13,12 @@ import {
   VisibilityState,
 } from '@iwsdk/core';
 import { DashboardSystem } from './dashboard.js';
+import { parseDeepLink } from './deep-link.js';
 
 export class PanelSystem extends createSystem({}) {
   private demoLoaded = false;
+  private deepLinkPresent = false;
+  private deepLinkPrId: number | null = null;
 
   init(): void {
     let panel: UIKitMLAsset | null = null;
@@ -35,6 +39,19 @@ export class PanelSystem extends createSystem({}) {
       return;
     }
 
+    // Reflect deep link on the status chip (fetch happens in index.ts)
+    const link = parseDeepLink();
+    if (link.prId != null) {
+      this.deepLinkPresent = true;
+      this.deepLinkPrId = link.prId;
+      if (statusText) {
+        statusText.setProperties({
+          text: `Deep link · PR #${link.prId} loading… · Enter XR`,
+          class: 'status status-ready',
+        });
+      }
+    }
+
     if (!this.world.xrEnabled) {
       xrButton.setProperties({ display: 'none' });
       exitButton.setProperties({ display: 'none' });
@@ -53,16 +70,26 @@ export class PanelSystem extends createSystem({}) {
         });
       }
       this.world.launchXR();
+      // Emulator may not fire visibility immediately — force cockpit open
+      window.setTimeout(() => {
+        const dashboard = this.world.getSystem(DashboardSystem);
+        dashboard?.ensureCockpit('after-launchXR');
+      }, 500);
+      window.setTimeout(() => {
+        const dashboard = this.world.getSystem(DashboardSystem);
+        dashboard?.ensureCockpit('after-launchXR-2s');
+      }, 2000);
     };
 
     const exitXR = () => {
       this.world.exitXR();
       if (statusText) {
         statusText.setProperties({
-          text: this.demoLoaded
-            ? 'Demo PR loaded · Ready'
-            : 'Ready · Gaze + Pinch',
-          class: 'status',
+          text: this.statusMessage(),
+          class:
+            this.deepLinkPresent || this.demoLoaded
+              ? 'status status-ready'
+              : 'status',
         });
       }
     };
@@ -92,6 +119,7 @@ export class PanelSystem extends createSystem({}) {
           class: 'status status-ready',
         });
       }
+      console.log('[Panel] Demo PR #4920 pushed to DashboardSystem');
     };
 
     xrButton.addEventListener('click', launchXR);
@@ -115,12 +143,24 @@ export class PanelSystem extends createSystem({}) {
         }
         if (statusText && is2D) {
           statusText.setProperties({
-            text: this.demoLoaded
-              ? 'Demo PR #4920 loaded · Enter XR to review'
-              : 'Ready · Gaze + Pinch',
+            text: this.statusMessage(),
+            class:
+              this.deepLinkPresent || this.demoLoaded
+                ? 'status status-ready'
+                : 'status',
           });
         }
       }),
     );
+  }
+
+  private statusMessage(): string {
+    if (this.deepLinkPresent && this.deepLinkPrId != null) {
+      return `Deep link · PR #${this.deepLinkPrId} · Enter XR`;
+    }
+    if (this.demoLoaded) {
+      return 'Demo PR #4920 loaded · Enter XR to review';
+    }
+    return 'Ready · Gaze + Pinch';
   }
 }
