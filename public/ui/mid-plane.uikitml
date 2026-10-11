@@ -1,0 +1,128 @@
+<!--
+  Mid plane - code / diff content.
+  Primary focus surface.
+-->
+<style>
+  .mid-root {
+    flex-direction: column;
+    width: 520px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    padding-left: 14px;
+    padding-right: 14px;
+    background-color: rgba(12, 12, 16, 0.94);
+    border-radius: 10px;
+    gap: 6px;
+  }
+
+  .file-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 6px;
+  }
+
+  .file-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e4e4e7;
+    font-family: fira-code;
+  }
+
+  .hunk-count {
+    font-size: 11px;
+    color: #71717a;
+  }
+
+  .diff-summary {
+    font-size: 11px;
+    color: #a1a1aa;
+  }
+
+  .diff-body {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .line {
+    flex-direction: row;
+    font-family: fira-code;
+    font-size: 12px;
+    line-height: 18px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 4px;
+    padding-right: 4px;
+    border-radius: 3px;
+  }
+
+  .line-num {
+    width: 28px;
+    color: #52525b;
+    text-align: right;
+    margin-right: 8px;
+  }
+
+  .line-add {
+    background-color: rgba(22, 101, 52, 0.35);
+    color: #bbf7d0;
+  }
+
+  .line-del {
+    background-color: rgba(127, 29, 29, 0.35);
+    color: #fecaca;
+  }
+
+  .line-ctx {
+    color: #a1a1aa;
+  }
+
+  .hunk-header {
+    font-size: 11px;
+    color: #60a5fa;
+    margin-top: 6px;
+    margin-bottom: 2px;
+    font-weight: 600;
+  }
+</style>
+
+<Panel class="mid-root">
+  <div class="file-header">
+    <div class="file-name" id="current-file">src/auth/session.ts</div>
+    <div class="hunk-count" id="hunk-info">Hunk 1 of 2</div>
+  </div>
+  <div class="diff-summary" id="diff-summary">
+    jwt.decode to jwt.verify + expiry check
+  </div>
+  <div class="diff-body" id="diff-body">
+    <div class="hunk-header">@@ -42,7 +42,12 @@ export function validateSession</div>
+    <div class="line line-ctx">
+      <div class="line-num">42</div>
+      <div>  if (!token) return null;</div>
+    </div>
+    <div class="line line-del">
+      <div class="line-num">43</div>
+      <div>-  const payload = jwt.decode(token);</div>
+    </div>
+    <div class="line line-add">
+      <div class="line-num">43</div>
+      <div>+  const payload = await jwt.verify(token, secret);</div>
+    </div>
+    <div class="line line-add">
+      <div class="line-num">44</div>
+      <div>+  if (!payload || payload.exp &lt; Date.now() / 1000) {</div>
+    </div>
+    <div class="line line-add">
+      <div class="line-num">45</div>
+      <div>+    return null;</div>
+    </div>
+    <div class="line line-add">
+      <div class="line-num">46</div>
+      <div>+  }</div>
+    </div>
+    <div class="line line-ctx">
+      <div class="line-num">47</div>
+      <div>  return payload as SessionPayload;</div>
+    </div>
+  </div>
+</Panel>

@@ -1,0 +1,85 @@
+<!--
+  Panel, Divider, Button, ButtonIcon, and ButtonLabel come from the bundled
+  Horizon kit. RectangleGoggles and LogIn are bundled Lucide icon components.
+-->
+<style>
+  .panel-root {
+    flex-direction: column;
+    width: 360px;
+    background-color: rgba(18, 18, 22, 0.95);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .panel-content {
+    align-items: center;
+    flex-direction: column;
+    padding-top: 16px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .heading {
+    height: 48px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 24px;
+    letter-spacing: -0.5px;
+    color: #272727;
+  }
+
+  .heading:dark {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .sub-heading {
+    color: #272727;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 18px;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .sub-heading:dark {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .button {
+    justify-content: flex-start;
+    margin-left: 24px;
+    margin-right: 24px;
+    margin-top: 16px;
+    margin-bottom: 24px;
+  }
+
+  .button-label {
+    transform-translate-y: 1px;
+  }
+</style>
+<Panel class="panel-root">
+  <div class="panel-content">
+    <div class="heading">Spatial Terminal</div>
+    <Divider></Divider>
+    <div class="sub-heading">
+      Micro-focus code &amp; data review for seated, stationary use.
+      Airplane-seat ready · One-bus-stop complete.
+    </div>
+    <div class="status" id="status-text">Ready · Gaze + Pinch</div>
+  </div>
+
+  <Button id="xr-button" class="button button-primary">
+    <ButtonIcon><RectangleGoggles></RectangleGoggles></ButtonIcon>
+    <ButtonLabel class="button-label">Enter Spatial Terminal</ButtonLabel>
+  </Button>
+
+  <Button id="demo-btn" class="button button-secondary">
+    <ButtonLabel class="button-label">Load Demo PR #4920</ButtonLabel>
+  </Button>
+
+  <Button id="exit-button" class="button button-secondary" style="display: none">
+    <ButtonIcon><LogIn></LogIn></ButtonIcon>
+    <ButtonLabel class="button-label">Exit to Browser</ButtonLabel>
+  </Button>
+</Panel>

@@ -1,0 +1,163 @@
+<!--
+  Near plane - status, actions, voice annotation.
+  Closest depth layer.
+-->
+<style>
+  .near-root {
+    flex-direction: column;
+    width: 420px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    padding-left: 16px;
+    padding-right: 16px;
+    background-color: rgba(18, 18, 22, 0.92);
+    border-radius: 12px;
+    gap: 8px;
+  }
+
+  .near-root:dark {
+    background-color: rgba(18, 18, 22, 0.92);
+  }
+
+  .title-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .pr-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #f4f4f5;
+  }
+
+  .chip-row {
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .chip {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background-color: #27272a;
+    color: #a1a1aa;
+  }
+
+  .chip-green {
+    background-color: #14532d;
+    color: #86efac;
+  }
+
+  .chip-blue {
+    background-color: #1e3a5f;
+    color: #93c5fd;
+  }
+
+  .actions {
+    flex-direction: row;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .action-btn {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 14px;
+    padding-right: 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  .action-btn:hover {
+    background-color: #2563eb;
+  }
+
+  .action-btn:active {
+    background-color: #1d4ed8;
+  }
+
+  .action-secondary {
+    background-color: #3f3f46;
+    color: #e4e4e7;
+  }
+
+  .action-secondary:hover {
+    background-color: #52525b;
+  }
+
+  .result-banner {
+    margin-top: 6px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    display: none;
+  }
+
+  .result-approved {
+    background-color: #14532d;
+    color: #86efac;
+  }
+
+  .result-changes {
+    background-color: #78350f;
+    color: #fcd34d;
+  }
+
+  .annotation-line {
+    margin-top: 4px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #a1a1aa;
+    background-color: rgba(39, 39, 42, 0.8);
+    display: none;
+  }
+
+  .annotation-listening {
+    color: #fcd34d;
+    background-color: rgba(120, 53, 15, 0.45);
+  }
+
+  .annotation-saved {
+    color: #93c5fd;
+    background-color: rgba(30, 58, 95, 0.5);
+  }
+</style>
+
+<Panel class="near-root">
+  <div class="title-row">
+    <div class="pr-title" id="pr-title">PR #4920 · fix: merge conflict in auth</div>
+  </div>
+  <div class="chip-row" id="chip-row">
+    <div class="chip chip-green">main ← feature/auth-fix</div>
+    <div class="chip chip-blue">3 files</div>
+    <div class="chip">+48 −12</div>
+  </div>
+  <div class="actions" id="actions-row">
+    <Button id="approve-btn" class="action-btn">
+      <ButtonLabel>Approve</ButtonLabel>
+    </Button>
+    <Button id="request-changes-btn" class="action-btn action-secondary">
+      <ButtonLabel>Request Changes</ButtonLabel>
+    </Button>
+  </div>
+  <div class="result-banner" id="result-banner">Approved · Session complete</div>
+  <div class="annotation-line" id="annotation-line">Listening...</div>
+</Panel>
