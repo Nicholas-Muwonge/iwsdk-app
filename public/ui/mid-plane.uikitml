@@ -5,7 +5,7 @@
 <style>
   .mid-root {
     flex-direction: column;
-    width: 520px;
+    width: 480px;
     padding-top: 12px;
     padding-bottom: 12px;
     padding-left: 14px;

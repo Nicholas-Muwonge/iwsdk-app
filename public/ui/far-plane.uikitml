@@ -5,7 +5,7 @@
 <style>
   .far-root {
     flex-direction: column;
-    width: 280px;
+    width: 260px;
     padding-top: 10px;
     padding-bottom: 10px;
     padding-left: 12px;

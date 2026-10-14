@@ -24,27 +24,21 @@ import {
   savePersistedSession,
   clearPersistedSession,
 } from './session-persist.js';
+import {
+  postPRComment,
+  formatAnnotationComment,
+} from './github.js';
+import { parseDeepLink } from './deep-link.js';
 
 /** Physical distances (meters) for the three depth planes */
-const DEPTH = {
-  near: 0.38, // closest – status chips
-  mid: 0.46, // primary reading surface
-  far: 0.55, // overview / file tree
-} as const;
-
-/** Horizontal offsets to create a gentle arc (still inside 1.5 ft) */
+/** Layout: DECIDE high+near, REVIEW center, NAVIGATE right+far */
+const DEPTH = { near: 0.48, mid: 0.78, far: 1.05 } as const;
 const ARC = {
-  near: { x: 0, y: 0.08 }, // slightly above eye
-  mid: { x: 0, y: -0.04 }, // centered
-  far: { x: 0.18, y: 0.02 }, // slight right, still reachable by gaze
+  near: { x: 0, y: 0.16 },
+  mid: { x: -0.02, y: -0.06 },
+  far: { x: 0.32, y: 0.04 },
 } as const;
-
-/** Uniform scale so panels feel readable at these distances */
-const SCALE = {
-  near: 0.22,
-  mid: 0.28,
-  far: 0.20,
-} as const;
+const SCALE = { near: 0.28, mid: 0.38, far: 0.30 } as const;
 
 const MAX_SESSION_MS = 10 * 60 * 1000;  // 10 min hard cap
 const IDLE_TIMEOUT_MS = 2 * 60 * 1000;  // 2 min idle
@@ -161,6 +155,7 @@ export class DashboardSystem extends createSystem({}) {
 
   private startSessionTimers(): void {
     this.clearSessionTimers();
+    this.updateTimerChip();
     this.lastInteractionAt = Date.now();
 
     this.timeoutTimer = window.setInterval(() => {
@@ -287,7 +282,7 @@ export class DashboardSystem extends createSystem({}) {
         maxAngle: 25,
       });
       // Pin in front of seated camera (looks toward -Z)
-      this.nearEntity.object3D!.position.set(0, 1.45, -0.7);
+      this.nearEntity.object3D!.position.set(0, 1.62, -0.55);
       this.nearEntity.object3D!.visible = true;
       this.wireNearPlaneActions(this.nearAsset);
 
@@ -308,7 +303,7 @@ export class DashboardSystem extends createSystem({}) {
         tolerance: 0.18,
         maxAngle: 28,
       });
-      this.midEntity.object3D!.position.set(0, 1.4, -0.95);
+      this.midEntity.object3D!.position.set(0, 1.32, -0.9);
       this.midEntity.object3D!.visible = true;
 
       // --- Far plane (overview) ---
@@ -328,7 +323,7 @@ export class DashboardSystem extends createSystem({}) {
         tolerance: 0.2,
         maxAngle: 30,
       });
-      this.farEntity.object3D!.position.set(0.3, 1.45, -1.15);
+      this.farEntity.object3D!.position.set(0.42, 1.4, -1.15);
       this.farEntity.object3D!.visible = true;
 
       // Inline far-plane file wiring
@@ -401,6 +396,16 @@ export class DashboardSystem extends createSystem({}) {
     const resultBanner = this.nearAsset.getElementById('result-banner');
     if (actionsRow) actionsRow.setProperties({ display: 'flex' });
     if (resultBanner) resultBanner.setProperties({ display: 'none' });
+
+    // Drive NAVIGATE slots from payload.files (first 3)
+    if (payload.files.length > 0) {
+      this.slotPaths = payload.files.slice(0, 3);
+      while (this.slotPaths.length < 3) {
+        this.slotPaths.push(this.slotPaths[this.slotPaths.length - 1] ?? '—');
+      }
+    }
+    this.syncFarPlaneLabels();
+    this.setMilestone('open');
 
     // Far plane stats
     if (this.farAsset && payload.files.length > 0) {
@@ -563,7 +568,17 @@ export class DashboardSystem extends createSystem({}) {
       });
     }
 
-    console.log(`[Dashboard] Session complete → ${summary}`);
+    console.log(`[Dashboard] Session complete -> ${summary}`);
+
+    // Entertainment feedback
+    if (opts.decision === 'approved') {
+      this.playTone(523, 90);
+      window.setTimeout(() => this.playTone(659, 90), 100);
+      window.setTimeout(() => this.playTone(784, 140), 200);
+    } else {
+      this.playTone(392, 100, 'triangle');
+      window.setTimeout(() => this.playTone(330, 140, 'triangle'), 120);
+    }
 
     window.setTimeout(() => {
       try {
@@ -580,6 +595,7 @@ export class DashboardSystem extends createSystem({}) {
     this.touchInteraction();
     this.activeFile = filePath;
     this.reviewedFiles.add(filePath);
+    this.setMilestone('review');
     savePersistedSession({ activeFile: filePath });
     const diff = FILE_DIFFS[filePath];
 
@@ -653,7 +669,7 @@ export class DashboardSystem extends createSystem({}) {
         });
       }
     }
-
+    this.playTone(660, 40, 'square');
     console.log(`[Dashboard] REVIEW focus -> ${filePath}`);
   }
 
@@ -666,6 +682,96 @@ export class DashboardSystem extends createSystem({}) {
     this.createDashboard().catch((err) =>
       console.error('[Dashboard] ensureCockpit failed', err),
     );
+  }
+
+  /** Light entertainment: short Web Audio cue (no assets required) */
+  private playTone(
+    freq: number,
+    durationMs = 120,
+    type: OscillatorType = 'sine',
+  ): void {
+    try {
+      const Ctx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = 0.08;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        ctx.currentTime + durationMs / 1000,
+      );
+      osc.stop(ctx.currentTime + durationMs / 1000 + 0.02);
+      window.setTimeout(() => void ctx.close(), durationMs + 50);
+    } catch {
+      /* audio optional */
+    }
+  }
+
+
+  private slotPaths: string[] = [
+    'src/auth/session.ts',
+    'src/middleware/auth.ts',
+    'tests/auth.test.ts',
+  ];
+  private milestoneStep: 'open' | 'review' | 'decide' = 'open';
+
+  private syncFarPlaneLabels(): void {
+    if (!this.farAsset) return;
+    const ids = ['file-session', 'file-middleware', 'file-test'] as const;
+    const labelIds = [
+      'file-session-label',
+      'file-middleware-label',
+      'file-test-label',
+    ] as const;
+    ids.forEach((id, i) => {
+      const path = this.slotPaths[i];
+      const label = this.farAsset!.getElementById(labelIds[i]);
+      if (label && path) {
+        const short = path.split('/').slice(-2).join('/');
+        label.setProperties({ text: short });
+      }
+      if (path) {
+        (FILE_IDS as Record<string, string>)[id] = path;
+      }
+    });
+  }
+
+  private setMilestone(step: 'open' | 'review' | 'decide'): void {
+    this.milestoneStep = step;
+    if (!this.nearAsset) return;
+    const el = this.nearAsset.getElementById('milestone-line');
+    if (!el) return;
+    const labels = {
+      open: '1 Open ✓ · 2 Review · 3 Decide',
+      review: '1 Open ✓ · 2 Review ✓ · 3 Decide',
+      decide: '1 Open ✓ · 2 Review ✓ · 3 Decide →',
+    };
+    el.setProperties({ text: labels[step], display: 'flex' });
+  }
+
+  private updateTimerChip(): void {
+    if (!this.nearAsset || !this.sessionStartedAt) return;
+    const el = this.nearAsset.getElementById('timer-chip');
+    if (!el) return;
+    const sec = Math.max(
+      0,
+      Math.floor((Date.now() - this.sessionStartedAt) / 1000),
+    );
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    el.setProperties({
+      text: `${m}:${String(s).padStart(2, '0')}`,
+      display: 'flex',
+    });
   }
 
   

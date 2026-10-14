@@ -11,7 +11,7 @@
 
   .near-root {
     flex-direction: column;
-    width: 420px;
+    width: 360px;
     padding-top: 12px;
     padding-bottom: 12px;
     padding-left: 16px;
@@ -33,7 +33,7 @@
   }
 
   .pr-title {
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 700;
     color: #f4f4f5;
   }
@@ -157,6 +157,7 @@
     <div class="chip chip-blue">3 files</div>
     <div class="chip">+48 −12</div>
     <div class="chip chip-blue" id="progress-chip">0/3 reviewed</div>
+    <div class="chip" id="timer-chip">0:00</div>
   </div>
   <div class="actions" id="actions-row">
     <Button id="approve-btn" class="action-btn">
@@ -166,6 +167,7 @@
       <ButtonLabel>Request Changes</ButtonLabel>
     </Button>
   </div>
+  <div class="chip" id="milestone-line">1 Open · 2 Review · 3 Decide</div>
   <div class="result-banner" id="result-banner">Approved · Session complete</div>
   <div class="annotation-line" id="annotation-line">Listening...</div>
 </Panel>
